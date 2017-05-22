@@ -2,9 +2,9 @@
 module Network.Gopher where
 
 import Prelude hiding (readFile, reverse, takeWhile)
-import System.Directory (listDirectory, doesDirectoryExist, canonicalizePath)
-import System.FilePath (makeRelative, takeFileName, dropFileName)
-import Data.Text
+import System.Directory
+import System.FilePath
+import Data.Text hiding (map)
 import qualified Data.List as L (isPrefixOf)
 
 crlf :: Text
@@ -19,7 +19,7 @@ fileExt = reverse . takeWhile (/= '.') . reverse
 isValidPath :: FilePath -> FilePath -> IO (Maybe FilePath)
 isValidPath root path = do
   cRoot <- canonicalize root
-  cPath <- canonicalize (root ++ "/" ++ path)
+  cPath <- canonicalize (root </> path)
   return $ if L.isPrefixOf cRoot cPath then
     Just cPath
   else Nothing
@@ -53,3 +53,9 @@ formatFile filename = do
     filenameOnly = pack $ takeFileName $ unpack filename
     (++) = append
     t = pack . (:[])
+
+getDirectory :: FilePath -> IO [Text]
+getDirectory dir = do
+  list <- listDirectory dir
+  cList <- mapM (canonicalizePath . (dir </>)) list
+  return $ map pack cList
