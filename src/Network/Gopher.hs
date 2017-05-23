@@ -45,14 +45,15 @@ fileType filename = do
   isDir <- doesDirectoryExist $ unpack filename
   return (if isDir then '1' else fileType' filename)
 
-formatFile :: Text -> IO Text
-formatFile filename = do
+formatFile :: Text -> Integer -> IO Text
+formatFile filename port = do
   filetype <- fileType filename
-  return ((t filetype) ++ filenameOnly ++ tab ++ filename ++ tab ++ "localhost" ++ tab ++ "70")
+  return ((t filetype) ++ filenameOnly ++ tab ++ filename ++ tab ++ "localhost" ++ tab ++ p)
   where
     filenameOnly = pack $ takeFileName $ unpack filename
     (++) = append
     t = pack . (:[])
+    p = pack $ show port
 
 getDirectory :: FilePath -> IO [Text]
 getDirectory dir = do

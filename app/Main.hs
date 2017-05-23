@@ -6,28 +6,33 @@ import Network.Socket hiding (recv)
 import Network.Socket.ByteString
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as T
-
-port :: Integer
-port = 70
+import System.Environment (getArgs)
 
 main :: IO ()
-main = withSocketsDo $ do
+main = getArgs >>= processArgs
+
+processArgs :: [String] -> IO ()
+processArgs [port] = run $ read port
+processArgs _ = run 70
+
+run :: Integer -> IO ()
+run port = withSocketsDo $ do
   addr <- getAddrInfo (Just defaultHints) Nothing (Just $ show port)
   sock <- socket (addrFamily $ head addr) Stream defaultProtocol
   bind sock (addrAddress $ head addr)
   listen sock 1
-  acceptLoop sock
+  acceptLoop port sock
   close sock
 
-acceptLoop :: Socket -> IO ()
-acceptLoop sock = do
+acceptLoop :: Integer -> Socket -> IO ()
+acceptLoop port sock = do
   (conn, _) <- accept sock
-  gopherSession conn
+  gopherSession port conn
   close conn
-  acceptLoop sock
+  acceptLoop port sock
 
-gopherSession :: Socket -> IO ()
-gopherSession conn = do
+gopherSession :: Integer -> Socket -> IO ()
+gopherSession port conn = do
   path <- T.strip <$> T.pack <$> B.unpack <$> recv conn 1024
   valid <- isValidPath "." $ T.unpack path
   case valid of
@@ -36,7 +41,7 @@ gopherSession conn = do
       case t of
         '1' -> do
           list <- getDirectory path
-          formatted <- mapM formatFile list
+          formatted <- mapM (\x -> formatFile x port) list
           sendAll conn (B.pack $ T.unpack $ T.unlines formatted)
         _ -> do
           file <- B.pack <$> readFile path
